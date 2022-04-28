@@ -1,6 +1,8 @@
 # K8s
 
-This repository is created in order to consolidate the learning materials and practice exercises regarding the preparation for the [CKAD](https://www.cncf.io/certification/ckad/) certification.
+This repository is created in order to consolidate the learning materials and practice exercises regarding the preparation for the [CKAD](https://www.cncf.io/certification/ckad/) certification. Several resources in this repository are taken from the following courses,
+
+- Kubernetes for Developers: Core Concepts by Dan Wahlin @PluralSight
 
 > [Kubernetes](https://kubernetes.io) is an open-source system of automating deployment, scaling and management of containerized applications.
 
