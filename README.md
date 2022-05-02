@@ -82,3 +82,8 @@ $ kubectl apply -f [dashboard-yaml-url from the official guideline]
 $ kubectl describe secret -n kube-system -> This will list down all secrets and we need to locate the very first secret:kubernetes.io/service-account-token and copy its token
 $ kubectl proxy > This will run the dashboard server. The URL to access he dashboard is also documented in the official guideline. There we'd have to login using the previously copies token.
 ```
+
+Now, that we are somewhat familiar with the basic ideas of K8s, we would like to know more about the fundamental objects of K8s. Following should be our references for this.
+
+- [Pods](https://github.com/sarkarchandan/ckad-prep/blob/master/Pods.md)
+- [Deployments](https://github.com/sarkarchandan/ckad-prep/blob/master/Deployments.md)
