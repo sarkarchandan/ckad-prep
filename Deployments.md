@@ -54,3 +54,144 @@ $ k delete deployment <deployment_name>
 $ k delete deployment -f deployment_spec.yaml
 $ k scale deployment [<deployment_name> | -f deployment_spec.yaml] --replicas=5 # We could also do this by simply updating the YAML specification and use the apply command
 ```
+
+Now it is time to see some of these commands in action. We have created the following Deployment specification.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx
+  labels:
+    app: my-nginx
+spec:
+  selector:
+    matchLabels:
+      app: my-nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: my-nginx
+    spec:
+      containers:
+        - name: my-nginx
+          image: nginx:alpine
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "200m"
+          ports:
+            - containerPort: 80
+          livenessProbe:
+            httpGet:
+              path: /index.html
+              port: 80
+            initialDelaySeconds: 15
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            failureThreshold: 1
+```
+
+and with this yaml specification we are going to create a deployment.
+
+```bash
+$ k create -f fundamentals/Deployment/nginx_deployment_spec.yaml --dry-run=client --validate=true
+
+deployment.apps/my-nginx created (dry run)
+
+$ k create -f fundamentals/Deployment/nginx_deployment_spec.yaml --save-config
+deployment.apps/my-nginx created
+
+$ k get all
+NAME                            READY   STATUS    RESTARTS   AGE
+pod/my-nginx-54cddf7468-9qv6b   1/1     Running   0          18s
+pod/my-nginx-54cddf7468-jl5lt   1/1     Running   0          18s
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   20d
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/my-nginx   2/2     2            2           18s
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/my-nginx-54cddf7468   2         2         2       18s
+
+$ k get deploy # Using any of the deploy, deployment or deployments have the same effect
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE
+my-nginx   2/2     2            2           105s
+
+$ k get deploy --show-labels
+NAME       READY   UP-TO-DATE   AVAILABLE   AGE     LABELS
+my-nginx   2/2     2            2           6m36s   app=my-nginx
+
+$ k describe deployment -l app=my-nginx # Here is an example where we are using the label selector instead of the name
+Name:                   my-nginx
+Namespace:              default
+CreationTimestamp:      Tue, 03 May 2022 04:43:09 +0200
+Labels:                 app=my-nginx
+Annotations:            deployment.kubernetes.io/revision: 1
+Selector:               app=my-nginx
+Replicas:               2 desired | 2 updated | 2 total | 2 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=my-nginx
+  Containers:
+   my-nginx:
+    Image:      nginx:alpine
+    Port:       80/TCP
+    Host Port:  0/TCP
+    Limits:
+      cpu:        200m
+      memory:     128Mi
+    Liveness:     http-get http://:80/index.html delay=15s timeout=2s period=5s #success=1 #failure=1
+    Readiness:    http-get http://:80/index.html delay=3s timeout=1s period=5s #success=1 #failure=1
+    Environment:  <none>
+    Mounts:       <none>
+  Volumes:        <none>
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Available      True    MinimumReplicasAvailable
+  Progressing    True    NewReplicaSetAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   my-nginx-54cddf7468 (2/2 replicas created)
+Events: # As we see, in this case the nature of the events are a bit different from that of the Pods
+  Type    Reason             Age    From                   Message
+  ----    ------             ----   ----                   -------
+  Normal  ScalingReplicaSet  3m19s  deployment-controller  Scaled up replica set my-nginx-54cddf7468 to 2
+
+$ k get po # This shows the number of currently running Pods. We want to scale this to 3 from command line
+NAME                        READY   STATUS    RESTARTS   AGE
+my-nginx-54cddf7468-9qv6b   1/1     Running   0          9m11s
+my-nginx-54cddf7468-jl5lt   1/1     Running   0          9m11s
+
+$ k scale deploy/my-nginx --replicas=3
+deployment.apps/my-nginx scaled
+$ k get po
+NAME                        READY   STATUS    RESTARTS   AGE
+my-nginx-54cddf7468-9qv6b   1/1     Running   0          10m
+my-nginx-54cddf7468-f8l6f   0/1     Running   0          4s # Some times it takes a bit of time
+my-nginx-54cddf7468-jl5lt   1/1     Running   0          10m
+$ k get po
+NAME                        READY   STATUS    RESTARTS   AGE
+my-nginx-54cddf7468-9qv6b   1/1     Running   0          11m
+my-nginx-54cddf7468-f8l6f   1/1     Running   0          32s # <- Now the Pod is ready
+my-nginx-54cddf7468-jl5lt   1/1     Running   0          11m
+
+$ k apply -f fundamentals/Deployment/nginx_deployment_spec.yaml # Now we are going back to the cluster state described in the YAML
+deployment.apps/my-nginx configured
+$ k get po
+NAME                        READY   STATUS    RESTARTS   AGE
+my-nginx-54cddf7468-9qv6b   1/1     Running   0          12m
+my-nginx-54cddf7468-jl5lt   1/1     Running   0          12m
+```
