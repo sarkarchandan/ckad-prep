@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-app
+spec:
+  replicas: 3
+  minReadySeconds: 10 # Specifies that we want to wait for 10 seconds before sending our initial traffic to the web server.
+  selector:
+    matchLabels:
+      app: node-app
+  template:
+    metadata:
+      labels:
+        app: node-app
+    spec:
+      containers:
+        - name: node-app
+          image: node-app:1.0
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

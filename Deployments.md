@@ -195,3 +195,180 @@ NAME                        READY   STATUS    RESTARTS   AGE
 my-nginx-54cddf7468-9qv6b   1/1     Running   0          12m
 my-nginx-54cddf7468-jl5lt   1/1     Running   0          12m
 ```
+
+## Deployment Options
+
+K8s Deployment offers several utilities, which are beneficial to cloud based applications. In this note we are going to briefly understand one of them for now, which is zero-downtime deployment of applications.
+
+<img src="res/k8s11.png" width="800" height="200" alt="Migrate from one version to another">
+
+In this example we want to upgrade previously shipped web server version to a new one. The question is, how we can do this kind of changes and others without affecting the currently running applications. There are multiple options available for this such as,
+
+- `Rolling updates` - Most straight forward strategy, which we are going to delve into at this point in time.
+- `Blue-green deployment` - Think about running more than one environment running at the same time. We can test the changes in a dedicated environment before rerouting our traffic to it from the previous environment.
+- `Canary deployment` - Think about rolling the changes for a very small portion of the traffic to evaluate the impact of the change before rolling the same for rest.
+- `Rollbacks` - Think about getting back to the previous state before the change, as the name suggests.
+
+### Rolling Updates [docs](https://kubernetes.io/docs/tutorials/kubernetes-basics/update/update-intro/)
+
+<img src="res/k8s12.png" width="500" height="400" alt="Rolling updates">
+
+This graphic taken from [this blog post](https://auth0.com/blog/deployment-strategies-in-kubernetes/) illustrates the idea of rolling updates cleanly. From a given cluster state having Pods running one version of the app we start by introducing an additional Pod with new version keeping the Pods having the older version still online. When the new Pod is ready, we start killing one of he older Pods. Then we roll another new Pod having the newer version and when it is ready we kill another of the older Pods. This is the general idea of rolling updates. There could be several ways of achieving this depending on the complexity of the application. However, in this example we'd stick to a simple strategy.
+
+For this example we have created a simple file structure like this using some example files from this [GitHub Repository](https://github.com/DanWahlin/DockerAndKubernetesCourseCode). As prerequisite to this experiment, we need to create three images with three versions of the node-app. In order to make that process simple we have a docker-compose YAML descriptor. Hence, we can simply use the command `docker-compose build`.
+
+```text
+├── Deployment
+│   ├── NA
+│   ├── node_app_dep1.yaml
+│   ├── node_app_dep2.yaml
+│   └── node_app_dep3.yaml
+├── NA
+├── Service
+│   └── node_app_lb_service.yaml
+└── code
+    └── rolling_updates
+        ├── docker-compose.yaml
+        └── node-app
+            ├── v1
+            │   ├── Dockerfile
+            │   └── server.js
+            ├── v2
+            │   ├── Dockerfile
+            │   └── server.js
+            └── v3
+                ├── Dockerfile
+                └── server.js
+```
+
+This time we have created a simple load balancer Service. We'd study the Services as a standalone topic soon. For the sake of the demonstration here we need to create a basic one. Because, all cloud based applications are behind some kind of load balancer service and it enables the transparency of the cloud applications from the perspective, that the users don't know, which server is actually handling the incoming request.
+
+```bash
+$ k get all
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   20d
+
+$ k create -f fundamentals/Service/node_app_lb_service.yaml --save-config # Creates the LoadBalancer Service
+service/node-app created
+
+$ k get all
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP      10.96.0.1       <none>        443/TCP        20d
+service/node-app     LoadBalancer   10.99.151.218   localhost     80:31821/TCP   3m11s # <- LoadBalancer Service
+
+$ k create -f fundamentals/Deployment/node_app_dep1.yaml --save-config
+deployment.apps/node-app created
+
+$ k get all
+NAME                           READY   STATUS    RESTARTS   AGE
+pod/node-app-7dd5f88f5-6mghd   1/1     Running   0          10s
+pod/node-app-7dd5f88f5-96f98   1/1     Running   0          10s
+pod/node-app-7dd5f88f5-gdd5p   1/1     Running   0          10s
+
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP      10.96.0.1       <none>        443/TCP        20d
+service/node-app     LoadBalancer   10.99.151.218   localhost     80:31821/TCP   4m41s
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/node-app   3/3     3            0           10s
+
+NAME                                 DESIRED   CURRENT   READY   AGE
+replicaset.apps/node-app-7dd5f88f5   3         3         3       10s
+
+# At this point upon accessing localhost:80 from the host machine we can see something like this -> Node v1 running in a pod: node-app-7dd5f88f5-96f98
+# Noticeable thing would be, that the container id 7dd5f88f5-96f98 won't change even after refreshing the page any number of time. It may seem, that the LoadBalancer is not working but in practice, browsers create a single connection to the server and when it has already established a connection, LoadBalancer is smart enough to ensure the consistency in the connection from the browser.
+# Now we change the deployment to migrate to version 2 of the application.
+
+$ k apply -f fundamentals/Deployment/node_app_dep2.yaml
+deployment.apps/node-app configured
+
+$ k get all
+
+NAME                            READY   STATUS              RESTARTS   AGE
+pod/node-app-79db4579fd-79lbd   0/1     ContainerCreating   0          1s
+pod/node-app-79db4579fd-hp484   1/1     Running             0          2s
+pod/node-app-79db4579fd-vmbm6   1/1     Running             0          3s
+pod/node-app-7dd5f88f5-6mghd    1/1     Running             0          12m
+pod/node-app-7dd5f88f5-96f98    1/1     Terminating         0          12m
+pod/node-app-7dd5f88f5-gdd5p    1/1     Terminating         0          12m
+
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP      10.96.0.1       <none>        443/TCP        20d
+service/node-app     LoadBalancer   10.99.151.218   localhost     80:31821/TCP   16m
+
+NAME                       READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/node-app   3/3     3            3           12m
+
+NAME                                  DESIRED   CURRENT   READY   AGE
+replicaset.apps/node-app-79db4579fd   3         3         2       3s
+replicaset.apps/node-app-7dd5f88f5    1         1         1       12m
+
+# Upon refreshing the localhost:80 browser page: Node v2 running in a pod: node-app-79db4579fd-hp484
+
+$ k get po
+
+NAME                        READY   STATUS        RESTARTS   AGE
+node-app-79db4579fd-79lbd   1/1     Running       0          21s
+node-app-79db4579fd-hp484   1/1     Running       0          22s
+node-app-79db4579fd-vmbm6   1/1     Running       0          23s
+node-app-7dd5f88f5-6mghd    1/1     Terminating   0          12m
+node-app-7dd5f88f5-96f98    1/1     Terminating   0          12m
+node-app-7dd5f88f5-gdd5p    1/1     Terminating   0          12m
+
+# Upon refreshing the localhost:80 browser page: Node v2 running in a pod: node-app-79db4579fd-hp484
+
+$ k get po
+
+NAME                        READY   STATUS    RESTARTS   AGE
+node-app-79db4579fd-79lbd   1/1     Running   0          38s
+node-app-79db4579fd-hp484   1/1     Running   0          39s
+node-app-79db4579fd-vmbm6   1/1     Running   0          40s
+
+# Repeating the experiment once more with version 3
+
+$ k apply -f fundamentals/Deployment/node_app_dep3.yaml
+deployment.apps/node-app configured
+
+$ k get po
+
+NAME                        READY   STATUS        RESTARTS   AGE
+node-app-5fd7b9788f-49gbj   1/1     Running       0          4s
+node-app-5fd7b9788f-dpnfz   1/1     Running       0          5s
+node-app-5fd7b9788f-rqsvm   1/1     Running       0          6s
+node-app-79db4579fd-79lbd   1/1     Terminating   0          3m31s
+node-app-79db4579fd-hp484   1/1     Terminating   0          3m32s
+node-app-79db4579fd-vmbm6   1/1     Terminating   0          3m33s
+
+# Upon refreshing the localhost:80 browser page: Node v3 running in a pod: node-app-5fd7b9788f-rqsvm
+
+$ k get po
+
+NAME                        READY   STATUS    RESTARTS   AGE
+node-app-5fd7b9788f-49gbj   1/1     Running   0          40s
+node-app-5fd7b9788f-dpnfz   1/1     Running   0          41s
+node-app-5fd7b9788f-rqsvm   1/1     Running   0          42s
+
+# Upon refreshing the localhost:80 browser page: Node v3 running in a pod: node-app-5fd7b9788f-rqsvm
+
+# From the first time we have established the server connection on localhost:80 in this experiment and throughout the rolling updates we did not loose the server connection for a single time. This is the essence of zero-downtime deployment. With each upgrade of the version a server connection to the newer version of the app is established.
+
+$ k delete -f fundamentals/Deployment/node_app_dep3.yaml
+deployment.apps "node-app" deleted
+
+$ k get all
+
+NAME                            READY   STATUS        RESTARTS   AGE
+pod/node-app-5fd7b9788f-49gbj   1/1     Terminating   0          6m20s
+pod/node-app-5fd7b9788f-dpnfz   1/1     Terminating   0          6m21s
+pod/node-app-5fd7b9788f-rqsvm   1/1     Terminating   0          6m22s
+
+NAME                 TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+service/kubernetes   ClusterIP      10.96.0.1       <none>        443/TCP        20d
+service/node-app     LoadBalancer   10.99.151.218   localhost     80:31821/TCP   26m
+
+$ k delete -f fundamentals/Service/node_app_lb_service.yaml
+service "node-app" deleted
+```
+
+This example was a gentle introduction to the Deployment options of K8s with a simple strategy to rolling updates. In practice Deployment options is a much bigger story, which will be unfolded gradually. In this example we also introduced a simple LoadBalancer Service to make sense of the demonstration. Next, we'd explore the Service as a standalone K8s object and the role it plays in a K8s cluster.
