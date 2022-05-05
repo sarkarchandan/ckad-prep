@@ -1,4 +1,4 @@
-# Deployments
+# [Deployments](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/)
 
 We need to understand about ReplicaSets before we talk about the Deployments. ReplicaSets are the fundamental K8s object, which maintains the creation and managing the Pods. A Deployment manages the Pods with the help of ReplicaSets. In the evolution story of K8s ReplicaSets came before Deployments. One of the basic promises of K8s is to preserve the desired cluster state. The applications are implemented and running inside the containers and they are hosted by the Pods. Hence, in some sense at any given point in time the running Pods and their number inside the cluster represent the cluster state. Deployment and ReplicaSets are the mechanism, with which this is state is maintained.
 

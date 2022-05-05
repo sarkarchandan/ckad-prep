@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    name: my-pod
+spec:
+  volumes:
+    - name: data
+      azureFile:
+        secretName: <azure-secret>
+        shareName: <share-name>
+        readOnly: false
+  containers:
+    - name: my-pod
+      image: my-image
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "200m"
+      volumeMounts:
+        - mountPath: /data/storage
+          name: data

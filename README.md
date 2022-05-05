@@ -88,3 +88,4 @@ Now, that we are somewhat familiar with the basic ideas of K8s, we would like to
 - [Pods](https://github.com/sarkarchandan/ckad-prep/blob/master/Pods.md)
 - [Deployments](https://github.com/sarkarchandan/ckad-prep/blob/master/Deployments.md)
 - [Services](https://github.com/sarkarchandan/ckad-prep/blob/master/Services.md)
+- [Storage Options](https://github.com/sarkarchandan/ckad-prep/blob/master/Storage.md)

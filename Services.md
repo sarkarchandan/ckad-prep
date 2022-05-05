@@ -1,4 +1,4 @@
-# Services
+# [Services](https://kubernetes.io/docs/concepts/services-networking/service/)
 
 Services are defined by K8s as an abstract way to expose an application running on a set of Pods as network service. K8s gives Pods their own IP addresses and a single DNS name for a set of Pods and can load balance among them. Needless to say Pods can live or die, means their lifetime can be limited. Hence, trying to reach the application with Pod IP address directly is not a good idea. And their the abstract the unified interface of the K8s Services come in.
 

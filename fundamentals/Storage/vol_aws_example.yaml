@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+  labels:
+    name: my-pod
+spec:
+  volumes:
+    - name: data
+      awsElasticBlockStore:
+        volumeID: <volume-id>
+        fsType: ext4
+  containers:
+    - name: my-pod
+      image: my-image
+      resources:
+        limits:
+          memory: "128Mi"
+          cpu: "200m"
+      volumeMounts:
+        - mountPath: /data/storage
+          name: data
