@@ -1,5 +1,7 @@
 # ConfigMaps and Secrets
 
+## ConfigMaps
+
 A [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/) is an API object used to store non-confidential data in key-value pairs. Pods can consume ConfigMaps as environment variables, command-line arguments using `kubectl` command, or as configuration files stored in a Volume. ConfigMap helps us to decouple environment-specific configuration from the container images, so that the applications are easily portable.
 
 > It is important to take a note, that the ConfigMaps don't support secrecy / encryption. We should not use it store things like sensitive data or credentials. A dedicated K8s object called [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) is there for that purpose.
@@ -117,10 +119,99 @@ This leads to creating a individual files for each configuration under the `data
 
 Which is the preferred way here, depends upon, whether we are expecting the configuration values to change in runtime. If they remain static using them as environment variables makes sense. If not, we can take the alternative file approach.
 
-Now we'd explore some examples for using ConfigMaps.
+Now we'd explore some examples for using ConfigMaps. In this example we would discover, that there is no rule that in order to use the configurations as environment variable we must have `.env` file. In this example we'd make use of a `.config` file but use the configurations in two different ways. We'd read the configurations from file in a variable and also use configurations as environment variables. In order to work with this example we have created another file structure.
 
-```bash
-
+```text
+.
+└── code
+    ├── configmap_demo
+    │   ├── Dockerfile
+    │   ├── node.deployment.yaml  <- Deployment manifest
+    │   ├── server.js
+    │   ├── settings.config <- .config file. This one helps to demonstrate the creation of ConfigMaps from env file using --from-env-file command line flag.
+    │   └── settings.configmap.yaml <- ConfigMap manifest. This one helps in getting the individual files created in the Volume. How, that is created is declared in the Deployment manifest.
+    └── NA
 ```
 
-[Secret](https://kubernetes.io/docs/concepts/configuration/secret/)
+With that now we go ahead with the demo.
+
+```bash
+# We start by creating the image
+$ docker image build -t node-configmap ./fundamentals/code/configmap_demo/
+
+# Then we create the ConfigMap object from file. We say, that we want the config map to be created as env
+$ k create cm app-settings --from-env-file=fundamentals/code/configmap_demo/settings.config
+configmap/app-settings created
+
+$ k get cm/app-settings -o yaml
+
+apiVersion: v1
+data:
+  enemies: aliens
+  enemies.cheat: "true"
+  enemies.cheat.level: noGoodRotten
+  lives: "3"
+kind: ConfigMap
+metadata:
+  creationTimestamp: "2022-05-08T12:09:36Z"
+  name: app-settings
+  namespace: default
+  resourceVersion: "492215"
+  uid: d4349fd2-72fc-45b0-af10-e44bfb10585a
+
+# We observe, that the ConfigMap is created and the configurations are set in such as way, that they can be used with the envFrom property in the Pod manifest. And that's what is declared in our Deployment manifest, which includes the Pod specifications.
+
+$ k apply -f fundamentals/code/configmap_demo/node.deployment.yaml
+deployment.apps/node-configmap created
+
+# At this point we have created the Deployment and the Pod. Our Pod specification mounts a Volume and it would be used for ConfigMap. We have specified the mountPath as /etc/config. WWhen we do this in this way it refers to a file path inside he Container. Hence, the next step is to exec inside the Container and see if we have the expected files created.
+
+$ k get all
+NAME                                  READY   STATUS    RESTARTS   AGE
+pod/node-configmap-59ccf77869-9bklc   1/1     Running   0          3m31s
+
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.96.0.1    <none>        443/TCP   26d
+
+NAME                             READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/node-configmap   1/1     1            1           3m31s
+
+NAME                                        DESIRED   CURRENT   READY   AGE
+replicaset.apps/node-configmap-59ccf77869   1         1         1       3m31s
+
+$ k exec pod/node-configmap-59ccf77869-9bklc -it -- sh
+/ > ls -l /etc/config
+total 0
+lrwxrwxrwx    1 root     root            14 May  8 12:14 enemies -> ..data/enemies
+lrwxrwxrwx    1 root     root            20 May  8 12:14 enemies.cheat -> ..data/enemies.cheat
+lrwxrwxrwx    1 root     root            26 May  8 12:14 enemies.cheat.level -> ..data/enemies.cheat.level
+lrwxrwxrwx    1 root     root            12 May  8 12:14 lives -> ..data/lives
+
+/ > cat /etc/config/enemies
+aliens
+
+/ > cat /etc/config/enemies.cheat.level
+noGoodRotten
+
+# As we see above, that individual files are created for each configuration specified in our ConfigMap manifest and they have expected values as well.
+
+# In the server.js file we have tried to read the configurations in two ways, by directly reading from Container file path and by reading an environment variable. Hence, now we need to port forward and verify if we can read the configurations in expected manner.
+
+$ k get po
+NAME                              READY   STATUS    RESTARTS   AGE
+node-configmap-59ccf77869-9bklc   1/1     Running   0          12m
+
+$ k port-forward node-configmap-59ccf77869-9bklc 9000
+Forwarding from 127.0.0.1:9000 -> 9000
+Forwarding from [::1]:9000 -> 9000
+
+# upon accessing the localhost:9000 we indeed can now see,
+'ENEMIES' (from env variable): aliens
+'enemies.cheat.level' (from volume): noGoodRotten
+```
+
+Now, that we have somewhat introductory understanding of using ConfigMaps we can move to Secrets.
+
+## Secrets
+
+[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
