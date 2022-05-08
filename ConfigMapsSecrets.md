@@ -214,4 +214,90 @@ Now, that we have somewhat introductory understanding of using ConfigMaps we can
 
 ## Secrets
 
-[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+[Secrets](https://kubernetes.io/docs/concepts/configuration/secret/) are objects that contains a small amount of sensitive data such as a password, a token, or a key. Such information might otherwise be put in a Pod specification or in a container image. Because Secrets can be created independently of the Pods that use them, there is less risk of the Secret (and its data) being exposed during the workflow of creating, viewing, and editing Pods. We could make the information stored inside Secrets to the Pods using the environment variables or using files stored inside a Volume, in exactly the same way we did for the ConfigMaps.
+
+One nice feature of K8s is, that it makes the Secrets available only to a Node, which hosts a Pod, that has requested for access to a Secret object. When that is not the case, Secret objects are not available to Node by default. This aspect adds an extra layer of security. When needed, Secrets are stored in Temporary File System (tmpfs) in a Node.
+
+K8s Secrets are, by default, stored un-encrypted in the API server's underlying data store (etcd). Anyone with API access can retrieve or modify a Secret, and so can anyone with access to etcd. Additionally, anyone who is authorized to create a Pod in a namespace can use that access to read any Secret in that namespace; this includes indirect access such as the ability to create a Deployment. [Here](https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/) is guideline for encrypting Secrets data, which is typically used by cluster admins.
+
+Let's some commands to create Secrets from the command line.
+
+- `k create secret generic <secret_name> --from-literal=pwd=<some_password>` - Create a Secret from literal much like, what we did for the ConfigMap.
+- `k create secret generic <secret_name> --from-file=ssh-privatekey=~/.ssh/id_rsa -- from-file=ssh-publickey=~/.ssh/id_rsa.pub` - Create a Secret from file
+- `k create secret tls <secret_name> --cert=<path_to_tls.cert> --key=<path_to_tls.key>` - Create a secret from TLS key pair.
+
+> Since Secret is a special type of ConfigMap we of course can create a Secret in the declarative approach using YAML file. But that would be highly discouraged. Because details we put in the YAML file are base64 encoded, means we can easily read them and understand, what they are. We need to be mindful about not committing these files to version control but we are also prone to errors. Hence, it is possible to create a Secret manifest like below but it is not advised.
+
+```yaml
+# Not advisable
+apiVersion: v1
+kind: Secret
+metadata:
+  name: db-password
+type: Opaque
+data:
+  app-password: some-app-password
+  admin-password: some-admin-password
+```
+
+Secrets are almost always created and maintained separately from Deployment/Pod/ConfigMap manifests. Let's first understand, how to use Secrets in Pods. There are no surprises with the following commands.
+
+- `k get secrets`
+- `k get secret/<secret_name> -o yaml`
+
+We are more interested in accessing Secrets from the Pod manifests.
+
+> Access Secret as environment variable
+
+<img src="res/k8s24.png" width="1000" height="400" alt="Accessing Secrets as environment variable">
+
+This looks familiar to, what we did for the ConfigMap. Only difference is, that this time we are using the property `secretKeyRef` instead of `configMapRef`.
+
+> Access Secret from files stored in Volume
+
+<img src="res/k8s25.png" width="1000" height="400" alt="Accessing Secrets from files stored in Volume">
+
+This also looks familiar. This time while declaring Volumes, instead of `configMap` we use the `secret` property. With that we now look at some example of using Secrets.
+
+```bash
+# We start by creating a Secret called db-password from literal. This Secret name would be referred in a Deployment/Pod manifest, that we are going to use shortly.
+$ k create secret generic db-passwords --from-literal=db-password='password' --from-literal=db-root-password='password'
+secret/db-passwords created
+
+$ k get secrets
+NAME                  TYPE                                  DATA   AGE
+db-passwords          Opaque                                2      88s
+default-token-tf67w   kubernetes.io/service-account-token   3      26d
+
+# We see, that our Secret has been created. Now we are going to create a several K8s resources on one go and try to understand each one. This is very similar to a MongoDB example, which we considered earlier. At that point we provided some credentials in the Deployment/Pod manifest itself. This time we're going to read them from Secrets.
+
+$ k apply -f fundamentals/ConfigMap/mongo.deployment.yaml
+configmap/mongo-secrets-env created
+storageclass.storage.k8s.io/local-storage created
+persistentvolume/mongo-pv created
+persistentvolumeclaim/mongo-pvc created
+statefulset.apps/mongo created
+
+# We have created several resources. In this example we have a ConfigMap and a Secret. There are some configurations, that we have kept in the ConfigMap. We could put those data into Secret as well but we wanted to have an example of using ConfigMap and Secret together.
+
+# Next thing to keep in mind, that in this example we have read the Secret both as environment variable and as readable files in mounted Volume. However, we ended up using the environment variable approach functionally. But we still at least can see the Secret from inside of the Container. Next we are trying to do that.
+
+$ k get po
+
+NAME      READY   STATUS    RESTARTS   AGE
+mongo-0   1/1     Running   0          3m52s
+
+$ k exec po/mongo-0 -it -- sh
+
+> ls -l /etc/db-passwords
+total 0
+lrwxrwxrwx 1 root root 18 May  8 14:08 db-password -> ..data/db-password
+lrwxrwxrwx 1 root root 23 May  8 14:08 db-root-password -> ..data/db-root-password
+
+> cat /etc/db-passwords/db-password
+password
+
+# As we see, that we could read the Secret from the mounted volume. These are the same Secret keys, which we created earlier from command line using literals.
+```
+
+With this we conclude a humble introduction to ConfigMaps and Secret objects in K8s.
