@@ -1,0 +1,8 @@
+# Kubernetes Dashboard
+
+1. kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml.
+2. Follow instructions to create a service account: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md.
+3. Create Bearer Token for the service account: `kubectl create token admin-user -n kubernetes-dashboard`.
+4. Copy the bearer token from stdout.
+5. Run `kubectl proxy` to run the dashboard server.
+6. Use the copied bearer token in the dashboard UI: http://localhost:8001/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/.

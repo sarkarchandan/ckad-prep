@@ -1,6 +1,6 @@
 # [Pods](https://kubernetes.io/docs/concepts/workloads/pods/)
 
-> A Pod is the basic execution unit of a K8s application, he smallest and simples unit in the K8s object model that we can create and deploy.
+> A Pod is the basic execution unit of a K8s application, the smallest and simples unit in the K8s object model that we can create and deploy.
 
 - Pods have a container runtime, where they can host one or more containers.
 - Often we distribute application components e.g., servers, caching, APIs, database etc. into pods.
