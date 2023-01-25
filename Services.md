@@ -197,11 +197,11 @@ metadata:
     app: nginx
 spec:
   selector:
-    app: nginx
+    app: nginx # <- Through this label the service knows, which pods it must associate itself to.
   ports:
     - name: http
-      port: 80
-      targetPort: 80
+      port: 80 # <- Port for external request
+      targetPort: 80 # <- Port where the service is running inside the container internally.
 ```
 
 > An example of `NodePort` Service.

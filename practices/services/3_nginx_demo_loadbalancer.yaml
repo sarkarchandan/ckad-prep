@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-nginx-loadbalancer
+  labels:
+    srv: hello-nginx-loadbalancer
+spec:
+  type: LoadBalancer
+  selector:
+    app: hello-nginx
+  ports:
+  - port: 80
+    targetPort: 80
