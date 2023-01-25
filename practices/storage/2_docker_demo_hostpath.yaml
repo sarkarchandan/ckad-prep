@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: docker-hostpath-demo
+  labels:
+    app: docker-hostpath-demo
+spec:
+  volumes:
+    - name: docker-socket
+      hostPath:
+        path: /var/run/docker.sock
+        type: Socket
+  containers:
+  - name: docker
+    image: docker
+    command: ["sleep"]
+    args: ["1000"]
+    volumeMounts:
+      - mountPath: /var/run/docker.sock
+        name: docker-socket
+    resources:
+      limits:
+        memory: "128Mi"
+        cpu: "200m"

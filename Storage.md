@@ -335,13 +335,13 @@ This somewhat gives us with an introductory idea of, how to use PersistentVolume
 
 From another perspective the definition of StorageClasses is an alternative to the way we mentioned above i.e. to provision a storage and register the same as PersistentVolume, Register a request to use the storage as PersistentVolumeClaim and finally mount the storage in the Pod specification using the PersistentVolumeClaim. This is inherently a static approach, where several detail about the storage e.g., its capacity is predefined before the Pods can make use of the same. StorageClasses on the other hand creates an option to dynamically provision the storage when needed using some kind of templates. The classes in this case distinguish themselves in terms of quality-of-service levels, backup polices or any arbitrary policies setup by the cluster administrators.
 
-Each StorageClass contains some fields such as `Provisioner`, `Parameters`, and `ReclaimPolicy`. We'd learn about them eventually because they are central to the idea of sing StorageClasses. But first, we want to understand the most crucial distinction between the earlier method of using PersistentVolumes wth that of StorageClasses. We'd see, that StorageClasses as a concept also fits into the ideas concerning PersistentVolume and PersistentVolumeClaim.
+Each StorageClass contains some fields such as `Provisioner`, `Parameters`, and `ReclaimPolicy`. We'd learn about them eventually because they are central to the idea of using StorageClasses. But first, we want to understand the most crucial distinction between the earlier method of using PersistentVolumes wth that of StorageClasses. We'd see, that StorageClasses as a concept also fits into the ideas concerning PersistentVolume and PersistentVolumeClaim.
 
 <img src="res/k8s20.png" width="1200" height="400" alt="StorageClasses">
 
 1. We start by creating a StorageClass this time, which also has its own kind of YAML declaration.
 2. Then comes the PersistentVolumeClaims declaration, which is linked with the StorageClass now. Eventually we'd see, that it binds to the PersistentVolume but happens dynamically as we see shortly. Main distinction here is, that previously we had to first create the PersistentVolume and then a claim could bind to it. Now we'd see, that PersistentVolumeClaim would be created first and linked to the StorageClass. PersistentVolume would then be provisioned dynamically.
-3. `Provisioner` component of the StorageClass determines the type of the volume plugin to use the correct PersistentVolume. Once that's done a PersistentVolume is provisioned and bound to the previously define PersistentVolumeClaim.
+3. `Provisioner` component of the StorageClass determines the type of the volume plugin to use the correct PersistentVolume. Once that's done a PersistentVolume is provisioned and bound to the previously defined PersistentVolumeClaim.
 4. Finally Pods can then make use of the PersistentVolume in the same manner previously explained.
 
 Now, let's see some example declaration to create PersistentVolumes using StorageClasses.
@@ -351,12 +351,12 @@ apiVersion: storage.k8s.io/v1 # Here the apiVersion reference is a bit different
 kind: StorageClass # Object kind is StorageClass
 metadata:
   name: local-storage # It is important to give a unique name to the StorageClass
-provisioner: kubernetes.io/no-provisioner # This is one of the most important parts. This identifies the Volume plugin, which should be used to provision the PersistentVolume. In this case we are going with np-provisioner, which represents, that the PersistentVolume won't be created automatically. That means in effect this one is similar to the older approach. In order to enable the dynamic provisioning of PersistentVolumes we need to provide an appropriate plugin e.g., kubernetes.io/aws-ebs, kubernetes.io/azure-file, kubernetes.io/gce-pd etc..
+provisioner: kubernetes.io/no-provisioner # This is one of the most important parts. This identifies the Volume plugin, which should be used to provision the PersistentVolume. In this case we are going with no-provisioner, which represents, that the PersistentVolume won't be created automatically. That means in effect this one is similar to the older approach. In order to enable the dynamic provisioning of PersistentVolumes we need to provide an appropriate plugin e.g., kubernetes.io/aws-ebs, kubernetes.io/azure-file, kubernetes.io/gce-pd etc..
 reclaimPolicy: Retain # Specifies to retain the PersistentVolume after use
 volumeBindingMode: WaitForFirstConsumer # This is self-explanatory. The PersistentVolume would be provisioned after the consumer of the same (some Pod) is created.
 ```
 
-Since in the above example of StorageClass declaration we did not have a provisioner we'd need to provide the declaration of the PersistentVolume ourselves. Let's look at such a declaration, which uses the StorageClass above. In this example we'd use a specification called `nodeAffinity`, which we have not used in any of our examples until now. Also in this example we intend to store the data in one of the Nodes in the cluster and the `nodeAffinity` specification would select, which the Node it would be.
+Since in the above example of StorageClass declaration we did not have a provisioner we'd need to provide the declaration of the PersistentVolume ourselves. Let's look at such a declaration, which uses the StorageClass above. In this example we'd use a specification called `nodeAffinity`, which we have not used in any of our examples until now. Also in this example we intend to store the data in one of the Nodes in the cluster and the `nodeAffinity` specification would select, which Node it would be.
 
 ```yaml
 apiVersion: v1
@@ -438,7 +438,8 @@ service/mongo        ClusterIP   10.98.164.77   <none>        27017/TCP   51s
 NAME                     READY   AGE
 statefulset.apps/mongo   1/1     51s
 
-# At this point we can also see, that the local file system location, which we designated as part of this example has files for MongoDB. Whatever database transaction we'd do, would be stored in the local file system of the Node, which in this case is the local machine.
+# At this point we can also see, that the local file system location, which we designated as part of this example has files for MongoDB. Whatever database transaction we'd do, would be stored in the local file system of the Node, which in this case is the local machine. 
+# At this point we could also try to execute an interactive shell in the side `pod/mongo-0` and try the mongoDB shell with `mongosh` command.
 
 $ k get pv # With this command we display the PersistentVolume, which does not show up with the k get all command, because this is a different kind of resource.
 NAME       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM               STORAGECLASS    REASON   AGE
