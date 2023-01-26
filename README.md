@@ -90,3 +90,13 @@ Now, that we are somewhat familiar with the basic ideas of K8s, we would like to
 - [Services](https://github.com/sarkarchandan/ckad-prep/blob/master/Services.md)
 - [Storage Options](https://github.com/sarkarchandan/ckad-prep/blob/master/Storage.md)
 - [ConfigMaps and Secrets](https://github.com/sarkarchandan/ckad-prep/blob/master/ConfigMapsSecrets.md)
+
+### Useful Commands
+
+- View logs for a Pod's container - `kubectl logs [pod-name]`
+- View the logs of a specific container within Pod - `kubectl logs [pod-name] -c [container-name`
+- View the logs for previously running Pods - `kubectl logs -p [pod-name]`
+- Stream a Pod's logs - `kubectl logs -f [pod-name]`
+- Describe Pod details - `kubectl describe pod [pod-name]`
+- Get Pod details with formatting - `kubectl get pod [pod-name] -o [yaml|json]` (Same works for any K8s resource)
+- Run interactive shell within Pod - `kubectl exec -it [pod-name] sh`
