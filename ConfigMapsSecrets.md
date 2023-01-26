@@ -10,7 +10,7 @@ The declarative approach to use a YAML for ConfigMaps is often referred to as a 
 
 ```yaml
 apiVersion: v1
-kind: ConfigMap # It is a COnfigMap kind of object
+kind: ConfigMap # It is a ConfigMap kind of object
 metadata:
   name: game-settings # Name metadata would be important as we'd see later, that we need it to get the configuration information
   labels:
