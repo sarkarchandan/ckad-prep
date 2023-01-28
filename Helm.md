@@ -201,3 +201,196 @@ running, which is accessible using the ingress proxy and again using `minikube t
 following is the general structure of the application that we deployed using the umbrella chart.
 
 <img src="./res/umb_chart_app.png">
+
+## Helm Template
+
+<img src="./res/why_template.png">
+
+Above Service manifests explain the reason of using helm templates. Ideally if we need to deploy the same application in
+two different environments we don't want to write two separate sets of manifests for the same. Instead we want to use a
+common template manifest and replace the environment-specific values for specific releases. This is where the helm
+templates come handy.
+
+<img src="./res/how_template_work.png">
+
+Helm templates are developed based on the [Golang template package](https://pkg.go.dev/text/template) and uses the
+prescribed so-called [mustache](https://mustache.github.io) template. As we understood so far that Helm server side
+maintains some metadata about the releases inside the running cluster in the form of Secrets but the templates are
+not stored. Instead the processed manifests are stored there. However, for debugging purpose Helm stores the current
+values used with templates at the client side.
+
+<img src="./res/template-commands.png">
+
+Above are some commands that we commonly use to inspect the result of template engine execution i.e. to check how the
+resulting manifests looks like after helm generates them using the template and the values.
+
+> NOTE: The `2 >&1` part in the last example above is for a re-direction. The usage of the `--debug` flag makes the
+output appear in the stderr. We need to redirect the same in the aforementioned way to make them appear in the stdout.
+In a nutshell the templates contain the mustache directives, which can be replaced by values or optionally they also
+can execute specific codes.
+
+<img src="./res/template-values.png">
+
+Above illustration shows different ways to supply the values to the templates. We can either use a `values.yaml` as the
+standard specification. Or we could use another YAML file in which case we have to specify the same using the `-f` flag.
+A third option is to supply the values from the command line using the `--set` flag using a key-value pair. We need to
+note that if we have a specific value specified using YAML file and if we supply a different value with the command line
+the later replaces the former value. We also note that the values in the YAML file are hierarchically organized as it
+can be seen in the example of accessing the value in the right hand side.
+
+<img src="./res/template-values2.png">
+
+In the above example we understand that the hierarchical semantics are respected while overriding some predefined value
+using the command line.
+
+We understood that K8s objects like Pod, Service etc. have specific structural schema, which must be respected when we
+try to incorporate values in the manifest. This structural schema is upheld in Helm using the `values.schema.json` file.
+For instance let's consider the following example YAML schema.
+
+```yaml
+service:
+    type: NodePort
+    name: my_service
+    port: 80
+    labels:
+        - name: name1
+        - name: name2
+```
+
+Now let's look at a JSON schema that describes the same YAML schema.
+
+<img src="./res/yaml-json-schema.png">
+
+In the left hand side we see the JSON representation for the YAML object and in the right hand side we see the
+[JSON Schema](https://json-schema.org) for the same. For example we notice the `service` object in the JSON schema with
+its underlying attributes and their expected types of values as well. We also see the optional `labels` object which
+according to the schema, is an array of underlying objects.
+
+<img src="./res/values-schema-json.png">
+
+The schema has to be stored in he `values.schema.json` file at the root of the chart. This schema would be validated
+each time we call any of the following functions.
+
+```bash
+$helm template [chart]
+
+$helm install [release] [chart]
+
+$helm upgrade [release] [chart]
+```
+
+Helm validates the required structures against schema including the types of the supplied values. The schema featured is
+only supported from Helm version 3. Now that we understood somewhat about the templates and the values we also want to
+understand that the data can come from other sources apart from the `values.yaml`, which we already saw. Following are
+some examples.
+
+- We can access some data from the `Chart.yaml` file.
+
+```yaml
+Chart.yaml
+----------
+version: 1.0.0
+name: my_chart
+appVersion: "2.1"
+
+Template
+--------
+apiVersion: v1
+kind: Service
+metadata:
+    name: {{.Chart.Name}} # We access the data using .Chart and the property value should be in uppercase
+```
+
+- We could access some runtime properties on the release object in the following manner.
+
+```yaml
+Release Runtime Properties
+--------------------------
+Release.Name
+Release.Namespace
+Release.Service
+Release.Revision
+Release.IsUpgrade
+Release.IsInstall
+
+Template
+--------
+apiVersion: v1
+kind: Service
+metadata:
+    name: {{.Release.Name}}
+```
+
+- We could access some data from the K8s cluster itself using `.Capabilities` keyword.
+
+```yaml
+K8s Capabilities
+----------------
+Capabilities.APIVersions
+Capabilities.KubeVersions
+    .Minor
+    .Major
+
+Template
+--------
+apiVersion: v1
+kind: Service
+metadata:
+    annotations: k8s:{{.Capabilities.KubeVersion}}
+```
+
+- We can include file contents using `.Files` object.
+
+```yaml
+Example Config File
+-------------------
+config.ini
+
+Template
+--------
+apiVersion: v1
+kind: Service
+metadata:
+    annotations: data:{{.Files.Get conf.ini}} # The file's location is relative to the root of the chart
+```
+
+- We can also access some basic information about the template itself.
+
+```yaml
+Basic Template Information
+--------------------------
+Template.Name
+Template.BasePath
+
+Template
+--------
+apiVersion: v1
+kind: Service
+metadata:
+    annotations: {{.Template.Name}}
+```
+
+<img src="./res/example_template_values.png">
+
+Above is an example where various sources of values are used to create a K8s manifest definition out of a template.
+Since helm supports sub-charts as we have seen using the `charts` directory we might wonder how the templates and values
+are incorporated for the parent and sub-charts.
+
+<img src="./res/sub-chart-override.png">
+
+As we see in the above illustration the parent chart and each of its sub-charts can have their own `values.yaml` file.
+Since each of the sub-charts are fully-featured charts themselves they can be used as standalone charts. But when they
+are intended to be used indeed as sub-charts describing components of the parent application it is possible to override
+some values for these components in the `values.yaml` file located in the parent scope. We see such an example below,
+where the sub-chart backend has provided some default values for two resources. But it is also possible to provide
+explicit values in the parent `values.yaml` file under the header of the component `backend`. This method of overriding
+template values are intuitive for umbrella charts. When we install a release using the umbrella chart helm merges all
+such values logically before generating the manifests for the release.
+
+<img src="./res/global-values.png">
+
+Neatly, it is also possible in helm to create some global value property in the `values.yaml` under the root scope of
+the umbrella chart. If defined, attributes under global would be accessible to umbrella chart as well as to all of its
+underlying chart as shown in the above illustration. Intuitively, global properties are only accessible from parent to
+children charts and not the other way around.
+
