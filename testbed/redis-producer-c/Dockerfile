@@ -11,4 +11,6 @@ RUN mkdir build \
     && cmake .. \
     && make
 
-CMD [ "/redis-producer/build/redis-producer" ]
+WORKDIR /redis-producer/build
+
+CMD [ "./redis-producer" ]
