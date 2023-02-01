@@ -394,3 +394,4 @@ the umbrella chart. If defined, attributes under global would be accessible to u
 underlying chart as shown in the above illustration. Intuitively, global properties are only accessible from parent to
 children charts and not the other way around.
 
+### Functions & Pipelines
