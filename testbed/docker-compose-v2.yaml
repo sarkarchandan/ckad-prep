@@ -1,0 +1,21 @@
+version: '2'
+services:
+  redis:
+    image: redis
+    container_name: redis
+    expose:
+      - 6379
+    environment:
+      - MASTER=true
+
+  producer:
+    container_name: producer
+    build: ./redis-producer-c
+    depends_on:
+      - redis
+
+  consumer:
+    container_name: consumer
+    build: ./redis-consumer-py
+    depends_on:
+      - producer

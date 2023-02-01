@@ -117,13 +117,13 @@ if __name__ == "__main__":
     print(f"Worker with sessionID: { q.session_id()}")
     print(f"Initial queue state: empty: {str(q.empty())}")
     while not q.empty():
-        item = q.lease(lease_dur=10, blocking=True, timeout=2) 
+        item = q.lease(lease_dur=5, blocking=True, timeout=2) 
         if item is not None:
             item_str: str = item.decode("utf-8")
             print(f"Working on: {item_str}")
             # Here we would do some actual work instead of sleeping like 
             # executing a CUDA kernel
-            time.sleep(5)
+            time.sleep(2)
             q.complete(value=item)
         else:
             print("Waiting for work")
