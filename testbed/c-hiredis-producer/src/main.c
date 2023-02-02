@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     for(size_t idx = 1; idx <= 10; idx += 1)
     {
         char* payload = (char*) malloc(50 * sizeof(char));
-        sprintf(payload, "bar-%lu", idx);
+        snprintf(payload, 50, "bar-%lu", idx);
         reply = redisCommand(ctx, "RPUSH %s %s", queue_name, payload);
         free(payload);
         printf("RPUSH Response: %s\n", reply -> str);

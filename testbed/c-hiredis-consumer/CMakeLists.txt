@@ -21,6 +21,9 @@ if(NOT hiredis_POPULATED)
     add_subdirectory(${hiredis_SOURCE_DIR} ${hiredis_BINARY_DIR})
 endif()
 
+find_package(Boost 1.74 REQUIRED)
+include_directories(${Boost_INCLUDE_DIR})
+
 set(SOURCES
     src/main.c
 )

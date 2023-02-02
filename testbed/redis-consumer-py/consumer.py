@@ -58,7 +58,7 @@ class RQueue:
         """
         return hashlib.sha224(item).hexdigest()
 
-    def _lease_exists(self, item: bytes):
+    def _lease_exists(self, item: bytes) -> int:
         """Returns True if a lease on the item exists
         
         Args:
