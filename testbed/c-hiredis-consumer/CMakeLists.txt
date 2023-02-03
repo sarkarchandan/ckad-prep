@@ -4,7 +4,7 @@ if(${CMAKE_VERSION} VERSION_LESS 3.22)
     cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
 endif()
 
-project(redis-consumer)
+project(redis-consumer LANGUAGES C CXX)
 
 include(FetchContent)
 
@@ -25,9 +25,11 @@ find_package(Boost 1.74 REQUIRED)
 include_directories(${Boost_INCLUDE_DIR})
 
 set(SOURCES
-    src/main.c
+    src/rqueue.cpp
+    src/main.cpp
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC hiredis)
+target_include_directories(${PROJECT_NAME} PRIVATE include)
 set_property(TARGET ${PROJECT_NAME} PROPERTY C_STANDARD 11)
