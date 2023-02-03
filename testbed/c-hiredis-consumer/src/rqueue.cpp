@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <functional>
+#include <assert.h>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -25,17 +26,17 @@ util::RedisQueue::RedisQueue(
         }
         throw std::runtime_error("Could not initialize RedisQueue, exiting...");
     }
+    redisReply *repl;
+    repl = (redisReply*) redisCommand(ctx, "PING");
+    if (repl != NULL && strcmp(repl -> str, "PONG") != 0)
+    {
+        freeReplyObject(repl);
+        redisFree(ctx);
+        throw std::runtime_error("Could not connect to redis server, exiting...");
+    }
     _session = boost::uuids::to_string(boost::uuids::random_generator_mt19937()());
     _processing_q_name = _main_q_name + ":processing";
     _lease_key_prefix = _main_q_name + ":leased_by_session:";
-}
-
-void util::RedisQueue::_redis_dispatch(const char* command, char* response) const
-{
-    redisReply *repl = static_cast<redisReply*>(redisCommand(ctx, command));
-    printf("Redis Response: %s\n", repl -> str);
-    response = repl -> str;
-    freeReplyObject(repl);
 }
 
 inline size_t util::RedisQueue::_key_for(const char *item)
@@ -43,62 +44,95 @@ inline size_t util::RedisQueue::_key_for(const char *item)
     return std::hash<std::string>{}(item);
 }
 
-size_t util::RedisQueue::_llen(RedisQueue::Type _q) const
+size_t util::RedisQueue::_llen(RedisQueue::QType _q) const
 {
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx, 
+        "%s %s", 
+        LLEN, 
+        (_q == QType::MAIN) ? _main_q_name.c_str() : _processing_q_name.c_str()
+    );
     size_t _len;
-    const char* command;
-    char *response;
-    _q == RedisQueue::Type::MAIN 
-        ? command = (LLEN + " " + _main_q_name).c_str()
-        : command = (LLEN + " " + _processing_q_name).c_str();
-    _redis_dispatch(command, response);
-    return strtoul(response, NULL, 0);
+    if (repl != nullptr) _len = repl -> integer;
+    freeReplyObject(repl);
+    return _len;
 }
 
 bool util::RedisQueue::_lease_exists(const char *item)
 {
-    const char* command = (
-        EXISTS + " " + (_lease_key_prefix + std::to_string(_key_for(item)))
-    ).c_str();
-    char *response;
-    _redis_dispatch(command, response);
-    return strtoul(response, NULL, 0) >= 1;
+    const char *arg = (_lease_key_prefix + std::to_string(_key_for(item))).c_str();
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx, 
+        "%s %s", 
+        EXISTS, arg);
+    bool _exs;
+    if (repl != nullptr) _exs = repl -> integer > 0;
+    freeReplyObject(repl);
+    return _exs;
 }
 
 void util::RedisQueue::_rpoplpush(bool blocking, uint8_t timeout, char *item)
 {
-    std::string command;
-    blocking
-        ? command = BRPOPLPUSH + " " + _main_q_name + " " + _processing_q_name + " " + std::to_string(timeout)
-        : command = RPOPLPUSH + " " + _main_q_name + " " + _processing_q_name + " " + std::to_string(timeout);
-    _redis_dispatch(command.c_str(), item);
+    if (blocking)
+    {
+        redisReply *repl = (redisReply*) redisCommand(
+            ctx,
+            "%s %s %s %u",
+            BRPOPLPUSH, _main_q_name.c_str(), _processing_q_name.c_str(), timeout
+        );
+        if (repl != nullptr) strcpy(item, repl -> str);
+        freeReplyObject(repl);
+        return;
+    }
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx,
+        "%s %s %s",
+        RPOPLPUSH, _main_q_name.c_str(), _processing_q_name.c_str()
+    );
+    if (repl != nullptr) strcpy(item, repl -> str);
+    freeReplyObject(repl);
 }
 
 void util::RedisQueue::_setex(const char* item, uint8_t duration)
 {
-    std::string item_key = _lease_key_prefix + std::to_string(_key_for(item));
-    std::string command = SETEX + " " + item_key + " " + std::to_string(duration) + " " + _session;
-    _redis_dispatch(command.c_str(), NULL);
+    std::string _item_key = _lease_key_prefix + std::to_string(_key_for(item));
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx,
+        "%s %s %u %s",
+        SETEX, _item_key.c_str(), duration, item
+    );
+    if(repl != nullptr) assert(strcmp(repl -> str, "OK") == 0);
+    freeReplyObject(repl);
 }
 
-void util::RedisQueue::_lrem(const char* value, uint8_t count)
+void util::RedisQueue::_lrem(const char* item, uint8_t count)
 {
-    std::string command = LREM + " " + _processing_q_name + " " + std::to_string(count) + " " + value;
-    _redis_dispatch(command.c_str(), NULL);
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx,
+        "%s %s %u %s",
+        LREM, _processing_q_name.c_str(), count, item
+    );
+    if(repl != nullptr) assert(repl -> integer >= 0);
+    freeReplyObject(repl);
 }
 
 void util::RedisQueue::_del(const char *item)
 {
-    std::string item_key = std::to_string(_key_for(item));
-    std::string command = DEL + " " + (_lease_key_prefix + item_key);
-    _redis_dispatch(command.c_str(), NULL);
+    std::string _item_key = std::to_string(_key_for(item));
+    redisReply *repl = (redisReply*) redisCommand(
+        ctx,
+        "%s %s",
+        DEL, _item_key.c_str()
+    );
+    if(repl != nullptr) assert(repl -> integer >= 0);
+    freeReplyObject(repl);
 }
 
 bool util::RedisQueue::empty() const
 {
     return (
-        (_llen(RedisQueue::Type::MAIN) == 0) && 
-        (_llen(RedisQueue::Type::PROCESSING) == 0)
+        (_llen(RedisQueue::QType::MAIN) == 0) && 
+        (_llen(RedisQueue::QType::PROCESSING) == 0)
     );
 }
 

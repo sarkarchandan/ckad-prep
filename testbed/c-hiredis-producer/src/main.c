@@ -37,7 +37,7 @@ int main(int argc, char **argv)
         snprintf(payload, 50, "bar-%lu", idx);
         reply = redisCommand(ctx, "RPUSH %s %s", queue_name, payload);
         free(payload);
-        printf("RPUSH Response: %s\n", reply -> str);
+        printf("RPUSH Response: %lld\n", reply -> integer);
         freeReplyObject(reply);
         sleep(1);
     }

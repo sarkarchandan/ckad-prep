@@ -13,7 +13,8 @@ namespace util
     {
         private:
             /// @brief Internal queue types
-            enum Type {MAIN, PROCESSING};
+            enum QType {MAIN, PROCESSING};
+
             /// @brief Redis context encapsulating server connection
             redisContext *ctx;
             std::string _session;
@@ -22,20 +23,13 @@ namespace util
             std::string _lease_key_prefix;
 
             /// Redis command stubs
-            std::string LLEN = "LLEN";
-            std::string EXISTS = "EXISTS";
-            std::string RPOPLPUSH = "RPOPLPUSH";
-            std::string BRPOPLPUSH = "BRPOPLPUSH";
-            std::string SETEX = "SETEX";
-            std::string LREM = "LREM";
-            std::string DEL = "DEL";
-            
-            /// @brief Internal dispatcher for redis commands using hiredis api 
-            /// using redis command stubs: https://redis.io/commands/
-            /// @param command Command to dispatch with REDIS command stubs 
-            /// and arguments
-            /// @param response Potential response from command dispatch
-            void _redis_dispatch(const char* command, char* response) const;
+            const char *LLEN = "LLEN";
+            const char *EXISTS = "EXISTS";
+            const char *RPOPLPUSH = "RPOPLPUSH";
+            const char *BRPOPLPUSH = "BRPOPLPUSH";
+            const char *SETEX = "SETEX";
+            const char *LREM = "LREM";
+            const char *DEL = "DEL";
 
             /// @brief Internal utility function to generate a unique hash value 
             /// for the item
@@ -46,10 +40,10 @@ namespace util
 
             /// Internal utility functions corresponding to redis 
             /// commands used in the implementation 
-            size_t _llen(RedisQueue::Type _q) const;
+            size_t _llen(RedisQueue::QType _q) const;
             void _rpoplpush(bool blocking, uint8_t timeout, char *item);
             void _setex(const char* item, uint8_t duration);
-            void _lrem(const char* value, uint8_t count = 0);
+            void _lrem(const char* item, uint8_t count = 0);
             void _del(const char *item);
         
         public:
