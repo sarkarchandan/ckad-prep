@@ -15,9 +15,18 @@ services:
       redis:
         condition: service_started
 
-  consumer:
-    container_name: consumer
+  consumer1:
+    restart: on-failure
+    container_name: consumer1
     build: ./redis-consumer-c
     depends_on:
       producer:
         condition: service_started
+
+  # consumer2:
+  #   restart: on-failure
+  #   container_name: consumer2
+  #   build: ./redis-consumer-c
+  #   depends_on:
+  #     producer:
+  #       condition: service_started

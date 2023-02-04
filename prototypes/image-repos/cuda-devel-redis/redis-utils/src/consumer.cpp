@@ -11,12 +11,12 @@ int main(int argc, char **argv)
     util::RedisQueue q = { queue_name, host_name, port  };
     std::cout << "Worker with Session ID: " << q.session_id() << "\n";
     std::cout << "Initial queue state empty ?: " << q.empty() << "\n";
+    if(q.empty()) exit(139);
     while (!q.empty())
     {
-        std::cout << "Inside loop..." << "\n";
-        char *item = (char*) malloc(10 * sizeof(char));
+        char *item = nullptr;
         q.lease(item);
-        if(strlen(item) > 0 && strcmp(item, "END") != 0)
+        if(item != nullptr && strlen(item) > 0)
         {
             std::cout << "Processing item: " << item << "\n";
             // Here we would do some actual work instead of sleeping like 
@@ -24,10 +24,10 @@ int main(int argc, char **argv)
             sleep(2);
             q.complete(item);
             free(item);
-            continue;
+        }else
+        {
+            std::cout << "Waiting for work..." << "\n";
         }
-        free(item);
-        break;
     }
     std::cout << "All items processed, exiting..." << "\n";
     return 0;

@@ -81,9 +81,11 @@ void util::RedisQueue::_rpoplpush(bool blocking, uint8_t timeout, char *item)
             ctx, "%s %s %s",
             RPOPLPUSH, _main_q_name.c_str(), _processing_q_name.c_str()
         );
-    (repl != nullptr && repl -> str != NULL)
-        ? strcpy(item, repl -> str)
-        : strcpy(item, "END");
+    if (repl != nullptr && repl -> len > 0)
+    {
+        item = (char*) malloc(repl -> len * sizeof(char));
+        strcpy(item, repl -> str);
+    }
     freeReplyObject(repl);
 }
 
@@ -128,7 +130,7 @@ bool util::RedisQueue::empty() const
 void util::RedisQueue::lease(char *item, uint8_t duration, uint8_t timeout, bool blocking)
 {
     _rpoplpush(blocking, timeout, item);
-    if(strcmp(item, "END") != 0) _setex(item, duration);
+    if (item != nullptr) _setex(item, duration);
 }
 
 void util::RedisQueue::complete(const char* item)
