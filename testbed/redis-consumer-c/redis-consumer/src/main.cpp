@@ -5,8 +5,8 @@
 
 int main(int argc, char **argv)
 {
-    std::string host_name = (argc > 1) ? argv[1] : "localhost";
-    uint16_t port = (argc > 2) ? *argv[2] : 8888;
+    std::string host_name = (argc > 1) ? argv[1] : "redis";
+    uint16_t port = (argc > 2) ? *argv[2] : 6379;
     std::string queue_name = (argc > 3) ? argv[3] : "foo";
     util::RedisQueue q = { queue_name, host_name, port  };
     std::cout << "Worker with Session ID: " << q.session_id() << "\n";

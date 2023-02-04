@@ -5,19 +5,19 @@ services:
     container_name: redis
     expose:
       - 6379
-    ports:
-      - "8888:6379"
     environment:
       - MASTER=true
 
-  # producer:
-  #   container_name: producer
-  #   build: ./redis-producer-c
-  #   depends_on:
-  #     - redis
+  producer:
+    container_name: producer
+    build: ./redis-producer-c
+    depends_on:
+      redis:
+        condition: service_started
 
-  # consumer:
-  #   container_name: consumer
-  #   build: ./redis-consumer-py
-  #   depends_on:
-  #     - producer
+  consumer:
+    container_name: consumer
+    build: ./redis-consumer-c
+    depends_on:
+      producer:
+        condition: service_started
