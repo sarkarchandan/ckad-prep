@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: redis-{{ .Release.Name }}
+spec:
+  parallelism: {{ .Values.parallelism }}
+  template:
+    metadata:
+      name: redis-{{ .Release.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: redis-{{ .Release.Name }}
+          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+          command: ["./redis-consumer"]
+          resources:
+            limits:
+              nvidia.com/gpu: 1

@@ -10,9 +10,4 @@ spec:
     - name: {{ .Release.Name }}-{{ .Chart.Name }}
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
       command: ["./redis-producer"]
-    #   volumeMounts:
-    #     - mountPath: /mnt/blobdisk
-    #       name: blobdisk01
-      resources:
-        limits:
-          nvidia.com/gpu: 1
+

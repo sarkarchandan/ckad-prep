@@ -5,7 +5,7 @@
 
 int main(int argc, char **argv)
 {
-    std::string host_name = (argc > 1) ? argv[1] : "redis";
+    std::string host_name = (argc > 1) ? argv[1] : "redis-server";
     uint16_t port = (argc > 2) ? *argv[2] : 6379;
     std::string queue_name = (argc > 3) ? argv[3] : "foo";
     util::RedisQueue q = { queue_name, host_name, port  };
@@ -13,6 +13,7 @@ int main(int argc, char **argv)
     std::cout << "Initial queue state empty ?: " << q.empty() << "\n";
     while (!q.empty())
     {
+        std::cout << "Inside loop..." << "\n";
         char *item = (char*) malloc(10 * sizeof(char));
         q.lease(item);
         if(strlen(item) > 0 && strcmp(item, "END") != 0)

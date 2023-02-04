@@ -7,7 +7,7 @@
 int main(int argc, char **argv)
 {
     // Define connection properties for redis
-    const char *host_name = (argc > 1) ? argv[1] : "redis";
+    const char *host_name = (argc > 1) ? argv[1] : "redis-server";
     uint16_t port = (argc > 2) ? *argv[2] : 6379;
     const char* queue_name = (argc > 3) ? argv[3] : "foo";
     // Attempt to establish connection
