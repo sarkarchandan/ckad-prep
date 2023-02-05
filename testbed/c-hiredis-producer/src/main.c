@@ -31,7 +31,7 @@ int main(int argc, char **argv)
     printf("PING Response: %s\n", reply -> str);
     freeReplyObject(reply);
     // Attempt to send payload
-    for(size_t idx = 1; idx <= 10; idx += 1)
+    for(size_t idx = 1; idx <= 15; idx += 1)
     {
         char* payload = (char*) malloc(50 * sizeof(char));
         snprintf(payload, 50, "bar-%lu", idx);
@@ -41,6 +41,8 @@ int main(int argc, char **argv)
         freeReplyObject(reply);
         sleep(1);
     }
+    // reply = redisCommand(ctx, "RPUSH %s %s", queue_name, "EOQ");
+    // freeReplyObject(reply);
     // Free Redis context
     redisFree(ctx);
     return 0;
