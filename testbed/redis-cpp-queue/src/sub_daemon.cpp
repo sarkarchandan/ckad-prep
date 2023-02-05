@@ -2,9 +2,12 @@
 #include <unistd.h>
 #include "subscriber.h"
 
-int main()
+int main(int argc, const char** argv)
 {
-    rds::Subscriber sub = rds::Subscriber("localhost", 8888, "foo");
+    const std::string host = (argc > 1) ? argv[1] : "localhost";
+    const uint16_t port = (argc > 2) ? *argv[2] : 8888;
+    const std::string queue = (argc > 3) ? argv[3] : "foo";
+    rds::Subscriber sub = rds::Subscriber(host, port, queue);
     std::cout << "Working wit sessionID: " << sub.session() <<  "\n";
     std::string q_state = (sub.empty() == 1) ? "True" : "False";
     std::cout << "Inital queue state: " << q_state << "\n";

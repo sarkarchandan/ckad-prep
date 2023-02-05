@@ -5,15 +5,8 @@
 
 
 rds::Subscriber::Subscriber(std::string const &host, uint16_t port, std::string const &queue)
-:_q_name(queue)
+:RedisBase(host, port, queue)
 {
-    sw::redis::ConnectionOptions opts;
-    opts.host = host;
-    opts.port = port;
-    opts.db = 0;
-    opts.connect_timeout = std::chrono::seconds(2);
-    opts.keep_alive = true;
-    ctx = std::make_unique<sw::redis::Redis>(opts);
     _session = boost::uuids::to_string(boost::uuids::random_generator_mt19937()());
     _proc_q_name = _q_name + ":processing";
     _lease_key_pref = _q_name + ":leased_by_session:";

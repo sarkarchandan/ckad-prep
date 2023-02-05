@@ -2,19 +2,13 @@
 #define SUBSCRIBER_H
 
 #include <chrono>
-#include <string>
-#include <memory>
 #include <cstdint>
-#include <sw/redis++/redis++.h>
+#include "base.h"
 
 namespace rds
 {
-    typedef std::unique_ptr<sw::redis::Redis> RedisPtr;
-
-    class Subscriber
+    class Subscriber: protected RedisBase
     {
-        RedisPtr ctx;
-        std::string _q_name;
         std::string _proc_q_name;
         std::string _session;
         std::string _lease_key_pref;
@@ -34,7 +28,7 @@ namespace rds
 
         Subscriber(std::string const &host, uint16_t port, std::string const &queue);
 
-        ~Subscriber() { ctx.release(); };
+        ~Subscriber() {};
 
         inline std::string session() const { return _session; }
         bool empty() const;
