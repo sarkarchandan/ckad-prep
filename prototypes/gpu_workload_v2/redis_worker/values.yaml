@@ -1,0 +1,4 @@
+parallelism: 2
+image:
+  repository: "chandan1986sarkar/cuda-redis-py"
+  tag: "latest"

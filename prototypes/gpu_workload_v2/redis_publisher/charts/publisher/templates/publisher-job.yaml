@@ -1,0 +1,18 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-{{ .Chart.Name }}
+  labels:
+    app: {{ .Release.Name }}-{{ .Chart.Name }}
+spec:
+  parallelism: {{ .Values.parallelism }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-{{ .Chart.Name }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: {{ .Release.Name }}-{{ .Chart.Name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        command: ["python3", "/daemon.py", "redis-server", "6379", "foo", "--action=pub"]

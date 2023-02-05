@@ -10,9 +10,6 @@ spec:
     spec:
       restartPolicy: OnFailure
       containers:
-        - name: redis-{{ .Release.Name }}
-          image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-          command: ["./redis-consumer"]
-          resources:
-            limits:
-              nvidia.com/gpu: 1
+      - name: redis-{{ .Release.Name }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        command: ["python3", "/daemon.py", "redis-server", "6379", "foo", "--action=sub"]

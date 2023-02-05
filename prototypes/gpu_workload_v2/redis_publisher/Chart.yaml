@@ -1,0 +1,6 @@
+apiVersion: v2
+name: redis
+appVersion: "0.1"
+description: A helm umbrella chart for redis app v0.1
+version: 0.0.1
+type: application

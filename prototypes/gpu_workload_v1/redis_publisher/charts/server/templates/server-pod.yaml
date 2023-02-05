@@ -3,11 +3,14 @@ kind: Pod
 metadata:
   name: {{ .Release.Name }}-{{ .Chart.Name }}
   labels:
-    name: {{ .Release.Name }}-{{ .Chart.Name }}
+    app: {{ .Release.Name }}
 spec:
   restartPolicy: OnFailure
   containers:
-    - name: {{ .Release.Name }}-{{ .Chart.Name }}
+    - name: master
       image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
-      command: ["./redis-producer"]
-
+      env:
+        - name: MASTER
+          value: "true"
+      ports:
+        - containerPort: 6379

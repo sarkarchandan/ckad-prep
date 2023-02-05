@@ -1,0 +1,6 @@
+apiVersion: v2
+name: worker
+appVersion: "0.1"
+description: A helm chart for publisher component v0.1
+version: 0.0.1
+type: application
